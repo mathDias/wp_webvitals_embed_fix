@@ -5,9 +5,19 @@ class ReplaceService {
 
     public $classicEditor = false;
     private $replaceRegex = [
+        "tiktok" => [
+            "classic" => [
+                "regex" => '/<script (.*?) src="(.*?)tiktok.com\/embed.js"><\/script>/s',
+                "container" => 'span',
+            ],
+            "blocks" => [
+                "regex" => '/<script (.*?) src="(.*?)tiktok.com\/embed.js"><\/script>/s',
+                "container" => 'div',
+            ], 
+        ],
         "twitter" => [
             "classic" => [
-                "regex" => '/<script async src="https:\/\/platform.twitter.com\/widgets.js" charset="utf-8"><\/script>/s',
+                "regex" => '/<script(.*?)src="(.*?)platform.twitter.com(.*?)><\/script>/s',
                 "container" => 'span',
             ],
             "blocks" => [
@@ -37,28 +47,53 @@ class ReplaceService {
         ],
     ];
 
+
     function __construct()
     {
-        $this->classicEditor = $this->isClassicEditorPluginActive();
+        
+        $this->classicEditor = !$this->isActive();
+        //var_dump($this->classicEditor);die();
     }
 
+
+    function isActive() {
+        // Gutenberg plugin is installed and activated.
+        $gutenberg = ! ( false === has_filter( 'replace_editor', 'gutenberg_init' ) );
+    
+        // Block editor since 5.0.
+        $block_editor = version_compare( $GLOBALS['wp_version'], '5.0-beta', '>' );
+    
+        if ( ! $gutenberg && ! $block_editor ) {
+            return false;
+        }
+    
+        if ( $this->isClassicEditorPluginActive() ) {
+            $editor_option       = get_option( 'classic-editor-replace' );
+            $block_editor_active = array( 'no-replace', 'block' );
+    
+            return in_array( $editor_option, $block_editor_active, true );
+        }
+    
+        return true;
+    }
+    
     /**
      * Check if Classic Editor plugin is active.
      *
      * @return bool
-    */
-
+     */
     function isClassicEditorPluginActive() {
         if ( ! function_exists( 'is_plugin_active' ) ) {
             include_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
-
+    
         if ( is_plugin_active( 'classic-editor/classic-editor.php' ) ) {
             return true;
         }
-
+    
         return false;
     }
+
 
     function str_replace_first($search, $replace, $subject) {
         $pos = strpos($subject, $search);
@@ -86,12 +121,31 @@ class ReplaceService {
         return $replacedContent;
     }   
 
+    public function tiktok ($content){
+        $match = false;
+        $replacedContent = $content;
+        $regex = $this->classicEditor ? $this->replaceRegex['tiktok']['classic']["regex"] : $this->replaceRegex['tiktok']['blocks']["regex"];
+        $container = $this->classicEditor ? $this->replaceRegex['tiktok']['classic']["container"] : $this->replaceRegex['tiktok']['blocks']["container"];
+        preg_match_all( $regex , $content, $match);
+       
+        foreach($match[0] as $key => $matchContent){
+            $code = addslashes( wp_json_encode( [ 'embed' => htmlentities( $matchContent ) ] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            $randomId =  uniqid();
+            $replacedContent = $this->str_replace_first($match[0][$key], '<'.$container.' id="'.$randomId.'"></'.$container.'><script>
+            window._iframeLazyLoad = window._iframeLazyLoad ||  {}
+            window._iframeLazyLoad["'.$randomId.'"] = `'.$code.'`;
+            </script>', $replacedContent);
+        }
+        return $replacedContent;
+    }   
+
     public function youtube ($content){
         $match = false;
         $replacedContent = $content;
         $regex = $this->classicEditor ? $this->replaceRegex['youtube']['classic']["regex"] : $this->replaceRegex['youtube']['blocks']["regex"];
         $container = $this->classicEditor ? $this->replaceRegex['youtube']['classic']["container"] : $this->replaceRegex['youtube']['blocks']["container"];
             preg_match_all( $regex , $content, $match);
+         
             foreach($match[0] as $key => $matchContent){
                 $code = addslashes( wp_json_encode( [ 'embed' => htmlentities( $matchContent ) ] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                 $randomId =  uniqid();

@@ -27,6 +27,9 @@ class WebvitalsEmbedFix extends BaseController{
         // Instagram filter
         $content = $this->replaceService->instagram($content);
 
+          // Tiktok filter
+        $content = $this->replaceService->tiktok($content);
+
         $lazyLoadScript = "<script >
 	    var listener = function(){
 		window.removeEventListener('mousemove',listener)
