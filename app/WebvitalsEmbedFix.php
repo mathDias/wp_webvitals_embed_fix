@@ -17,19 +17,23 @@ class WebvitalsEmbedFix extends BaseController{
     }
 
     public function initReplace($content){
-        
         // Twitter filter
         $content = $this->replaceService->twitter($content);
 
         // Youtube filter
+    
         $content = $this->replaceService->youtube($content);
-
+    
         // Instagram filter
         $content = $this->replaceService->instagram($content);
 
-          // Tiktok filter
+        // Tiktok filter
         $content = $this->replaceService->tiktok($content);
 
+        
+        // spotify filter
+        $content = $this->replaceService->spotify($content);
+      
         $lazyLoadScript = "<script >
 	    var listener = function(){
 		window.removeEventListener('mousemove',listener)

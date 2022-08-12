@@ -7,41 +7,52 @@ class ReplaceService {
     private $replaceRegex = [
         "tiktok" => [
             "classic" => [
-                "regex" => '/<script (.*?) src="(.*?)tiktok.com\/embed.js"><\/script>/s',
+                "regex" => '/<script[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*tiktok.com\/embed.js(?:\/[^\s"]*)?"?[^>]*>.*?<\/script>/i',
                 "container" => 'span',
             ],
             "blocks" => [
-                "regex" => '/<script (.*?) src="(.*?)tiktok.com\/embed.js"><\/script>/s',
+                "regex" => '/<script[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*tiktok.com\/embed.js(?:\/[^\s"]*)?"?[^>]*>.*?<\/script>/i',
                 "container" => 'div',
             ], 
         ],
         "twitter" => [
             "classic" => [
-                "regex" => '/<script(.*?)src="(.*?)platform.twitter.com(.*?)><\/script>/s',
+                "regex" => '/<script[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*platform.twitter.com(?:\/[^\s"]*)?"?[^>]*>.*?<\/script>/i',
                 "container" => 'span',
             ],
             "blocks" => [
-                "regex" => '/<figure class="wp-block-embed is-type-rich is-provider-twitter(.*?)<\/figure>/s',
+                "regex" => '/<figure class="wp-block-embed is-type-rich is-provider-twitter(.*?)<\/figure>/i',
                 "container" => 'div',
             ], 
         ],
         "youtube" => [
             "classic" => [
-                "regex" => '/<iframe (.*?) src="https:\/\/www.youtube.com\/embed\/(.*?)<\/iframe>/s',
+                "regex" => '/<iframe[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*youtube.com(?:\/[^\s"]*)?"?[^>]*>.*?<\/iframe>/i',
                 "container" => 'span',
             ],
             "blocks" => [
-                "regex" => '/<iframe (.*?) src="https:\/\/www.youtube.com\/embed\/(.*?)<\/iframe>/s',
+                "regex" => '/<iframe[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*youtube.com(?:\/[^\s"]*)?"?[^>]*>.*?<\/iframe>/i',
+                "container" => 'div',
+            ], 
+        ],
+        
+        "spotify" => [
+            "classic" => [
+                "regex" => '/<iframe[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*open.spotify.com\/embed(?:\/[^\s"]*)?"?[^>]*>.*?<\/iframe>/i',
+                "container" => 'span',
+            ],
+            "blocks" => [
+                "regex" => '/<iframe[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*open.spotify.com\/embed(?:\/[^\s"]*)?"?[^>]*>.*?<\/iframe>/i',
                 "container" => 'div',
             ], 
         ],
         "instagram" => [
             "classic" => [
-                "regex" => '/<script (.*?) src="(.*?)instagram.com\/embed.js"(.*?)><\/script>/s',
+                "regex" => '/<script[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*instagram.com\/embed.js(?:\/[^\s"]*)?"?[^>]*>.*?<\/script>/i',
                 "container" => 'span',
             ],
             "blocks" => [
-                "regex" => '/<script(.*?)src="(.*?)instagram.com\/embed.js"(.*?)><\/script>/s',
+                "regex" => '/<script[^>]*src\s*=\s*"?https?:\/\/[^\s"\/]*instagram.com\/embed.js(?:\/[^\s"]*)?"?[^>]*>.*?<\/script>/i',
                 "container" => 'div',
             ], 
         ],
@@ -104,11 +115,15 @@ class ReplaceService {
     }
 
     public function twitter ($content){
+        
         $match = false;
         $replacedContent = $content;
         $regex = $this->classicEditor ? $this->replaceRegex['twitter']['classic']["regex"] : $this->replaceRegex['twitter']['blocks']["regex"];
         $container = $this->classicEditor ? $this->replaceRegex['twitter']['classic']["container"] : $this->replaceRegex['twitter']['blocks']["container"];
-            preg_match_all( $regex , $content, $match);
+
+        preg_match_all( $regex , $content, $match);
+    
+
             
             foreach($match[0] as $key => $matchContent){
                 $code = addslashes( wp_json_encode( [ 'embed' => htmlentities( $matchContent ) ] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -118,6 +133,9 @@ class ReplaceService {
                 window._iframeLazyLoad["'.$randomId.'"] = `'.$code.'`;
             </script>', $replacedContent);
             }
+
+
+         
         return $replacedContent;
     }   
 
@@ -144,6 +162,25 @@ class ReplaceService {
         $replacedContent = $content;
         $regex = $this->classicEditor ? $this->replaceRegex['youtube']['classic']["regex"] : $this->replaceRegex['youtube']['blocks']["regex"];
         $container = $this->classicEditor ? $this->replaceRegex['youtube']['classic']["container"] : $this->replaceRegex['youtube']['blocks']["container"];
+            preg_match_all( $regex , $content, $match);
+         
+            foreach($match[0] as $key => $matchContent){
+                $code = addslashes( wp_json_encode( [ 'embed' => htmlentities( $matchContent ) ] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                $randomId =  uniqid();
+                $replacedContent = $this->str_replace_first($match[0][$key], '<'.$container.' id="'.$randomId.'"></'.$container.'><script>
+                window._iframeLazyLoad = window._iframeLazyLoad ||  {}
+                window._iframeLazyLoad["'.$randomId.'"] = `'.$code.'`;
+            </script>', $replacedContent);
+            }
+        return $replacedContent;
+    }
+
+    
+    public function spotify ($content){
+        $match = false;
+        $replacedContent = $content;
+        $regex = $this->classicEditor ? $this->replaceRegex['spotify']['classic']["regex"] : $this->replaceRegex['spotify']['blocks']["regex"];
+        $container = $this->classicEditor ? $this->replaceRegex['spotify']['classic']["container"] : $this->replaceRegex['spotify']['blocks']["container"];
             preg_match_all( $regex , $content, $match);
          
             foreach($match[0] as $key => $matchContent){
